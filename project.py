@@ -7,6 +7,8 @@ import random
 import shutil
 import time
 
+models = 0
+
 # menu
 def main():
     while True:
@@ -109,24 +111,69 @@ def train_and_test():
     recognizer = cv.face.LBPHFaceRecognizer_create()
     recognizer.train(faces, np.array(labels))
     
+    # TESTING
+    test_path = './Dataset/test/'
+    
+    accuracy_list = []
+    
+    for filename in os.listdir(test_path):
+        img_path = f"{test_path}/{filename}"
+        test_img = cv.imread(img_path)
+        img_gray = cv.imread(img_path, cv.IMREAD_GRAYSCALE)
+        
+        face = models.detectMultiScale(img_gray, scaleFactor=1.2, minNeighbors=5)
+        
+        if(len(face) < 1):
+            continue
+        else:
+            for rect in face:
+                x, y, w, h = rect
+                face_image = img_gray[y:y+h, x:x+w]
+
+                res, conf = recognizer.predict(face_image)
+                
+                accuracy_list.append(conf)
+        
+    
+    average_accuracy = sum(accuracy_list) / len(accuracy_list)
     
     print("Training and Testing")
     time.sleep(1)
     print("Training and Testing Finished")
     time.sleep(0.5)
-    print("Average Accuracy = {}")
-
-
+    print(f"Average Accuracy = {float(average_accuracy)}")
+    
+    input("press enter to continue...")
+    main()
 
 
 def predict():
-    print("this is predict")
-    # try:
+    if models != 0:
+        predict_path = input("Input absolute path for image to predict >> ")
+        predict_img = cv.imread(predict_path)
+        img_gray = cv.imread(predict_img, cv.IMREAD_GRAYSCALE)
         
-    # except NameError:
-    #     print("model not found.")
-    #     input("press enter to continue...")
-    #     main()
+        face = models.detectMultiScale(img_gray, scaleFactor=1.2, minNeighbors=5)
+        
+        for rect in face:
+            x, y, w, h = rect
+            face_img = img_gray[y:y+h, x:x+w]
+            res, conf = recognizer.predict(face_img)
+            
+            conf = math.floor(conf*100)/100
+            
+            cv.rectangle(predict_img, (x, y), (x+w, y+h), (0, 255, 0), 2)           
+            image_text = f"{train_folder[res]} : {str(conf)}%"  
+            
+            cv.putText(predict_img, image_text, (x, y-10), cv.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
+            
+            cv.imshow("Result", predict_img)
+            cv.waitKey(0)
+            cv.destroyAllWindows()
+    else:
+       print("model not found.")
+       input("press enter to continue...")
+       main()
 
 if __name__ == '__main__':
     main()

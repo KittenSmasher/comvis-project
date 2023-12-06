@@ -7,8 +7,6 @@ import random
 import shutil
 import time
 
-models = 0
-
 # menu
 def main():
     while True:

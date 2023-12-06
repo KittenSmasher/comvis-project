@@ -7,9 +7,6 @@ import os
 import numpy as np
 import math
 
-# %% [markdown]
-# Pre-Trained Classifier Models for Face Detection
-
 # %%
 classifier = cv.CascadeClassifier('haarcascade_frontalface_default.xml')
 

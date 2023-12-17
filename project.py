@@ -2,15 +2,21 @@
 import cv2 as cv
 import os
 import numpy as np
-import math
 import random
 import time
+import atexit
 
 def clear():
     if os.name == 'nt':
         os.system('cls')
     else:
         os.system('clear')
+        
+def clean():
+    try:
+        os.remove("trained_model.yml")
+    except FileNotFoundError:
+        pass
 
 # DATASET
 dataset_path = './Dataset'
@@ -44,8 +50,10 @@ def main():
         
         elif choice == 2:
             predict()
+            clear()
             
         elif choice == 3:
+            clean()
             break
 
 def train_and_test():
@@ -56,9 +64,9 @@ def train_and_test():
   # split dataset
     train_list = []
     test_list = []
-
     images = []
-
+    
+    num_img = 0
     train_ratio = 0.75
 
     # convert label to integer
@@ -66,8 +74,6 @@ def train_and_test():
 
     for i, folder in enumerate(dataset_dir):
         label_map[folder] = i
-
-    for folder in dataset_dir:
 
         folder_path = os.path.join(dataset_path, folder)
         if not os.path.isdir(folder_path):
@@ -113,8 +119,9 @@ def train_and_test():
                 
     recognizer.train(faces, np.array(labels))
 
-    correct = 0
-    total_predict = 0
+    # correct = 0
+    # total_predict = 0
+    avg = []
 
     for face in test_list:
         image = cv.imread(face)
@@ -128,17 +135,20 @@ def train_and_test():
             for rect in img:
                 x, y, w, h = rect
                 face_img = img_gray[y:y+h, x:x+w]
-                res, _ = recognizer.predict(face_img)
+                _, conf = recognizer.predict(face_img)
 
-                face_path = os.path.basename(os.path.dirname(face))
-                actual_label = label_map[face_path]
+                # face_path = os.path.basename(os.path.dirname(face))
+                # actual_label = label_map[face_path]
 
-                total_predict += 1
+                # total_predict += 1
 
-                if res == actual_label:
-                    correct +=1
+                # if res == actual_label:
+                #     correct +=1
+                
+                acc = (1-(conf/300))*100
+                avg.append(acc)
 
-    avg_accuracy = correct / total_predict * 100
+    avg_accuracy = sum(avg)/len(avg)
     model_trained = True
     
     # SAVE MODEL
@@ -171,20 +181,21 @@ def predict():
             face_img = img_gray[y:y+h, x:x+w]
             res, conf = recognizer.predict(face_img)
             
-            conf = math.floor(conf*100)/100
+            conf = (1-(conf/300))*100
             
-            # cv.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)           
+            cv.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2) 
+                      
             image_text = f"{dataset_dir[res]} : {str(conf)}%"  
-            print(image_text)
+            # print(image_text)
             
-            # cv.putText(image, image_text, (x, y-10), cv.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
+            image_pos = (max(0, x-5), max(0, y-10))
             
-            # cv.imshow("Result", image)
-            # cv.waitKey(0)
-            # cv.destroyAllWindows()
+            cv.putText(image, image_text, image_pos, cv.FONT_HERSHEY_PLAIN, 1.4, (0, 255, 0), 2)
+            
+            cv.imshow("Result", image)
+            cv.waitKey(0)
+            cv.destroyAllWindows()
 
 if __name__ == '__main__':
     main()
-
-
-# face detection
+    atexit.register(clean)
